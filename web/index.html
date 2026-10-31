@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sift</title>
+  <link rel="icon" href="/web/icon.png">
+  <link rel="stylesheet" href="/web/vendor/pixelify-sans.css">
+  <link rel="stylesheet" href="/web/vendor/pixelart-icons-font.css">
+  <link rel="stylesheet" href="/web/app.css">
+</head>
+<body>
+  <!-- animated pixel night sky with parallax hills -->
+  <canvas id="sky" class="sky" aria-hidden="true"></canvas>
+  <!-- particles: flight trails, landing bursts, fireworks -->
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- ============ SETUP ============ -->
+  <main id="setup" class="screen setup">
+    <section class="title">
+      <h1 class="logo" id="logo" aria-label="Sift">SIFT</h1>
+      <p class="tagline">Feed it your Takeout zips.<br>It keeps only your trips.</p>
+      <ul class="perks">
+        <li><span class="perk-ico c-yellow"><i class="pixelart-icons-font-map"></i></span>Trip photos and videos, filed by region and city</li>
+        <li><span class="perk-ico c-pink"><i class="pixelart-icons-font-cloud"></i></span>Selfies, home, WhatsApp and screenshots stay in Google Photos</li>
+        <li><span class="perk-ico c-green"><i class="pixelart-icons-font-pin"></i></span>Missing or wrong locations fixed from nearby photos</li>
+      </ul>
+      <div class="collection" id="collection" hidden></div>
+    </section>
+
+    <form id="setupForm" class="window" autocomplete="off">
+      <div class="win-bar"><span id="formTitle">Load zip</span><span class="win-dots"><i></i><i></i><i></i></span></div>
+      <div class="win-body">
+        <div class="mode" role="radiogroup" aria-label="What are you sorting?">
+          <button type="button" role="radio" data-mode="zip" style="--c:var(--green)"><i class="pixelart-icons-font-archive"></i><span><b>Zip mode</b><small>Google Takeout zips</small></span></button>
+          <button type="button" role="radio" data-mode="folder" style="--c:var(--pink)"><i class="pixelart-icons-font-image"></i><span><b>Photos mode</b><small>A folder of photos and videos</small></span></button>
+        </div>
+        <div class="field">
+          <span class="label" id="srcLabel">Takeout zip</span>
+          <div class="path-row">
+            <button type="button" class="path-box" id="srcBox" data-target="src">
+              <i class="pixelart-icons-font-archive" id="srcIcon"></i><span id="srcText">Choose a zip</span>
+            </button>
+            <button type="button" class="btn small c-cyan" id="srcBrowse" data-target="src"><i class="pixelart-icons-font-search"></i>Browse</button>
+          </div>
+          <span class="hint" id="srcHint">Pick one Takeout zip. You can do the next one after.</span>
+        </div>
+        <div class="presets" id="presets"></div>
+
+        <div class="field">
+          <span class="label">Trip collection folder</span>
+          <div class="path-row">
+            <button type="button" class="path-box" id="outBox" data-target="out">
+              <i class="pixelart-icons-font-save"></i><span id="outText"></span>
+            </button>
+            <button type="button" class="btn small c-purple" id="outBrowse" data-target="out"><i class="pixelart-icons-font-search"></i>Browse</button>
+          </div>
+          <span class="hint">Keep the same folder for every zip so trips build up in one place.</span>
+        </div>
+
+        <div class="home" id="home">
+          <div class="home-row">
+            <i class="pixelart-icons-font-home"></i>
+            <span id="homeSummary">Home is <b id="homeName">not set</b>, within <b id="homeRadiusLabel">60 km</b></span>
+            <button type="button" class="change" id="homeChange" aria-controls="homeEdit" aria-expanded="false">Change</button>
+          </div>
+          <div class="home-edit" id="homeEdit" hidden>
+            <p class="home-why">Photos taken near home aren't trips, so Sift leaves them out. Your home stays on this PC.</p>
+            <div class="home-grid">
+              <div class="field home-search">
+                <label class="label" for="homeSearch">Home city</label>
+                <input id="homeSearch" type="search" placeholder="Start typing, like Hyderabad" autocomplete="off" spellcheck="false"
+                       role="combobox" aria-autocomplete="list" aria-controls="homeList" aria-expanded="false">
+                <div class="home-list" id="homeList" role="listbox" hidden></div>
+              </div>
+              <label class="field"><span class="label">Home radius</span>
+                <select id="rad">
+                  <option value="10">10 km</option><option value="25">25 km</option><option value="40">40 km</option>
+                  <option value="60" selected>60 km</option><option value="100">100 km</option><option value="150">150 km</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <p class="form-error" id="formError" role="alert"></p>
+        <button class="btn start c-yellow" id="startBtn" type="submit"><i class="pixelart-icons-font-play"></i><span>Find my trips</span></button>
+        <p class="credits">Place names &copy; <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0) &middot; <a href="/licenses" target="_blank">Licenses</a> &middot; Not affiliated with Google</p>
+      </div>
+    </form>
+  </main>
+
+  <!-- ============ FILE BROWSER ============ -->
+  <div class="modal" id="browser" hidden>
+    <div class="window browser" role="dialog" aria-modal="true" aria-labelledby="brTitle">
+      <div class="win-bar"><span id="brTitle">Choose a Takeout zip</span><button type="button" class="win-close" id="brClose" aria-label="Close"><i class="pixelart-icons-font-close"></i></button></div>
+      <div class="br-layout">
+        <nav class="br-places" id="brPlaces" aria-label="Quick places"></nav>
+        <section class="br-main">
+          <div class="br-nav">
+            <button type="button" class="btn icon c-cyan" id="brUp" aria-label="Up one folder"><i class="pixelart-icons-font-arrow-up"></i></button>
+            <div class="crumbs" id="brCrumbs"></div>
+          </div>
+          <div class="br-preview" id="brPreview"></div>
+          <div class="br-list" id="brList"></div>
+        </section>
+      </div>
+      <div class="br-foot">
+        <div class="br-sel"><i class="pixelart-icons-font-folder" id="brSelIcon"></i><span id="brSel">This PC</span><small id="brCount"></small></div>
+        <button type="button" class="btn c-yellow" id="brPick"><i class="pixelart-icons-font-check"></i><span>Use this folder</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SORTING ============ -->
+  <main id="sorting" class="screen sorting" hidden>
+    <header class="hud">
+      <div class="logo small">SIFT</div>
+      <div class="xp">
+        <div class="xp-meta"><span class="xp-lv">Checked <b id="pDone">0</b> / <span id="pTotal">0</span><span class="kept">Kept <b id="pKept">0</b></span></span><span id="pStatus">Opening zip</span></div>
+        <div class="xp-bar" id="xpBar"></div>
+      </div>
+      <div class="controls">
+        <div class="seg" role="radiogroup" aria-label="Animation speed">
+          <button type="button" data-speed="chill" role="radio">Chill</button>
+          <button type="button" data-speed="quick" role="radio" class="on">Quick</button>
+          <button type="button" data-speed="turbo" role="radio">Turbo</button>
+        </div>
+        <button class="btn icon c-cyan" id="pauseBtn" type="button" aria-label="Pause"><i class="pixelart-icons-font-pause"></i></button>
+        <button class="btn icon c-pink" id="skipBtn" type="button" aria-label="Skip the show" title="Skip the show"><i class="pixelart-icons-font-forward"></i></button>
+      </div>
+    </header>
+
+    <section class="stage" id="stage">
+      <div class="unlock" id="unlock" hidden><span class="unlock-k">New area unlocked</span><span class="unlock-v" id="unlockName"></span></div>
+      <div class="combo" id="combo" hidden></div>
+      <figure class="card" id="card">
+        <div class="card-img" id="cardImg"></div>
+        <div class="scan" id="scan"></div>
+        <div class="faces" id="faces"></div>
+        <span class="badge-video" id="cardVideo" hidden><i class="pixelart-icons-font-video"></i></span>
+      </figure>
+      <div class="readout">
+        <div class="chips" id="chips"></div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+      <div class="deck" id="deck" aria-hidden="true"></div>
+      <p class="backlog" id="backlog" hidden></p>
+    </section>
+
+    <aside class="dest">
+      <div class="dest-head"><h2><i class="pixelart-icons-font-map"></i>Trips</h2><span id="tripsCount">0 areas</span></div>
+      <div class="trips-scroll" id="tripsScroll">
+        <div class="trips" id="trips">
+          <div class="trips-empty" id="tripsEmpty"><i class="pixelart-icons-font-map"></i>Trips appear here as Sift finds them</div>
+        </div>
+      </div>
+      <div class="dest-head"><h2><i class="pixelart-icons-font-cloud"></i><span id="leftTitle">Left in Google Photos</span></h2><span id="cloudTotal">0</span></div>
+      <div class="bins" id="bins"></div>
+    </aside>
+  </main>
+
+  <!-- ============ DONE ============ -->
+  <div id="done" class="done" hidden>
+    <div class="done-inner">
+      <h2 class="clear" id="clearTitle">Zip clear</h2>
+      <div class="done-num" id="doneNum">0</div>
+      <p class="done-label" id="doneTitle">trip photos and videos kept</p>
+      <div class="done-stats" id="doneStats"></div>
+      <p class="done-note" id="doneNote"></p>
+      <div class="done-actions">
+        <button class="btn c-yellow" id="openOut" type="button"><i class="pixelart-icons-font-folder"></i><span>Open trips</span></button>
+        <button class="btn c-red" id="delZip" type="button" hidden><i class="pixelart-icons-font-trash"></i><span id="delZipText">Delete this zip</span></button>
+        <button class="btn c-cyan" id="again" type="button"><i class="pixelart-icons-font-next"></i><span id="againText">Next zip</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- pixel confirm dialog -->
+  <div class="modal" id="confirm" hidden>
+    <div class="window confirm" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle">
+      <div class="win-bar"><span id="cfTitle">Delete zip?</span></div>
+      <div class="win-body">
+        <p id="cfText"></p>
+        <div class="done-actions">
+          <button class="btn c-red" id="cfYes" type="button"><i class="pixelart-icons-font-trash"></i><span>Delete it</span></button>
+          <button class="btn c-cyan" id="cfNo" type="button"><span>Keep it</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flights" id="flights" aria-hidden="true"></div>
+  <script src="/web/fx.js"></script>
+  <script src="/web/app.js"></script>
+</body>
+</html>

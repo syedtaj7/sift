@@ -1,0 +1,5 @@
+pillow
+pi-heif
+opencv-python-headless<5
+numpy
+reverse_geocoder

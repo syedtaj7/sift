@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff77a8?style=flat-square&labelColor=0f0920" alt="MIT license"></a>
 </p>
 
-<p align="center"><b>Sift</b> opens your Google Takeout zips one at a time (or any folder of photos) and keeps <b>only your travel photos and videos</b>,<br>filed by region and city. Selfies, home shots, WhatsApp forwards and screenshots stay in Google Photos.</p>
+<p align="center"><b>Sift</b> opens your Google Takeout zips one at a time (or any folder of photos) and keeps <b>only your travel photos and videos</b>, filed by region and city. Selfies, home shots, WhatsApp forwards and screenshots stay in Google Photos.</p>
 
 <img src="docs/readme/divider.svg" width="100%" alt="">
 
